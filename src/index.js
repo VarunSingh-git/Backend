@@ -1,27 +1,24 @@
 // require('dotenv').config({ path: './env'})
+import mongoose from "mongoose";
 import dotenv from "dotenv"
-import connectDB from "./db/index.js";
+import express from "express"
+import { DB_NAME } from "./constants.js";
 dotenv.config({
     path: './env'
-})
-
-connectDB()
+}) // when we use import module syntax for dotnv then we should write down config of .env
 
 
-
-
-/*
-import express from "express"
+// here we write our code directly (this is 2nd approach)
 const app = express()
 
-(async () => {
+;(async () => {
     try {
         await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`)
         app.on("error",(err)=>{
             console.log(`ERROR: ${err}`);
             throw err
         })
-
+        
         app.listen(process.env.PORT, ()=>{
             console.log(`App is listening on ${process.env.PORT}`);
         })
@@ -30,4 +27,11 @@ const app = express()
         throw error
     }
 })()
-    */
+
+
+
+// we import database connection file from ./db/index.js (this is 1st approach)
+/*import connectDB from "./db/index.js";
+
+
+connectDB()*/ 
