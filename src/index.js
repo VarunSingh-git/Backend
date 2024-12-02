@@ -1,7 +1,7 @@
 // we import database connection file from ./db/index.js (this is 1st approach)
 import connectDB from "./db/index.db.js";
-import express from "express"
-const app =express()
+// import express from "express"
+// const app =express()
 import dotenv from "dotenv"
 dotenv.config({
     path: './env'
