@@ -60,6 +60,8 @@ userSchema.methods.isPasswordCorret = async function (password) {
     return await bcrypt.compare(password, this.password) // compare is method that present in bcrypt pkg. for comparing password that already exist in db.
 }
 
+
+// jwt is bearer token. ye token jiske pass hai usko data bheja jayga.
 userSchema.methods.getAccessToken = async function () {
     return jwt.sign(
         {
@@ -85,6 +87,6 @@ userSchema.methods.getRefreshToken = async function () {
         }
     )
 }
-// jwt is bearer token. ye token jiske pass hai usko data bheja jayga.
 
 export const User = mongoose.model("User", userSchema)
+
