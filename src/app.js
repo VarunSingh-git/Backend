@@ -23,7 +23,8 @@ import userRouter from './routes/user.routes.js'
 
 // phle hum app.get ki help se route likhte the aur vahi pe controller bhi but ab esa nahi hoga kyuki humne sab files ko seperate kar diya hai toh ab hume route ko use karne ke liye ya laane ke liye middleware ka use karna hoga i.e. app.use()
 
-app.use("/api/v1/users", userRouter)
+app.use("/api/v1/users", userRouter) // here /api/v1/users is prefix and userRouter is router that import from user.routes.js
 
 
 export default app
+// agr humne kisi function ko default export kiya hai tab hum bina curly braces ke or koi bhi naaam dekar usko import kar skte hai. but if don't use default export statement then we use curly braces and same name as function

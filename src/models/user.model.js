@@ -51,7 +51,7 @@ const userSchema = new Schema({
 userSchema.pre("save", async function (next) { // here we dont use arrrow func cuz arrow func has no access of 'this' keyword.
     if (!this.isModified("password")) return next() // here we check that if password is not modified then goto next flag otherwise goto encryption method.
 
-    this.password = bcrypt.hash(this.password, 10) // this is use for make hash of password
+    this.password = await bcrypt.hash(this.password, 10) // this is use for make hash of password
     next()
 })
 
