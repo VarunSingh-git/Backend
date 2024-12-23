@@ -3,8 +3,6 @@ import { asynchandler } from "../utils/async.handler.js";
 import { apiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudnary.js"
-import path from "path"
-// import { upload } from "../middlewars/multer.middleware.js"
 
 
 const registerUser = asynchandler(async (req, res, next) => {
@@ -22,19 +20,19 @@ const registerUser = asynchandler(async (req, res, next) => {
 
     const { fullname, email, username, password } = req.body
     console.log('req.body', req.body)
-    console.log(`req.files: ${req.files}`)
+    // console.log(`req.files: ${req.files}`)
 
     if ([fullname, email, username, password].some((field) => field?.trim() === "")) {
         throw new apiError(400, "All Fields are required")
     }
 
-    if (fullname.length < 2 || fullname.length === "" && !email.includes("@") ||
+    if (fullname.length < 2 && fullname.length == 0 && !email.includes("@") ||
         email.startsWith("@") ||
         email.endsWith("@") ||
         email.split("@").length !== 2 ||
         email.split("@")[1].indexOf(".") === -1 ||
         email.split("@")[1].startsWith(".") ||
-        email.split(".").pop().length < 2 && password.length < 8 || password.length === "") {
+        email.split(".").pop().length < 2 && password.length < 8 || password.length == 0) {
         throw new apiError(400, "Invalid Creadentials")
     }
 
