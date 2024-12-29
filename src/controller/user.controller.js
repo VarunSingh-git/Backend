@@ -3,7 +3,33 @@ import { asynchandler } from "../utils/async.handler.js";
 import { apiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudnary.js"
+import { log } from "console"
+import jwt from "jsonwebtoken";
+import { userInfo } from "os";
 
+const generateAccessAndRefreshToken = async (userid) => {
+    try {
+        const user = await User.findById(userid)
+        const accessToken = await user.getAccessToken()
+        const refreshToken = await user.getRefreshToken()
+
+        user.refreshToken = refreshToken
+        await user.save(
+            {
+                validateBeforeSave: false
+            }
+        )
+
+        return {
+            accessToken,
+            refreshToken
+        }
+
+    } catch (error) {
+        throw new apiError(500, error.message)
+    }
+
+}
 
 const registerUser = asynchandler(async (req, res, next) => {
 
@@ -20,7 +46,7 @@ const registerUser = asynchandler(async (req, res, next) => {
 
     const { fullname, email, username, password } = req.body
     console.log('req.body', req.body)
-    // console.log(`req.files: ${req.files}`)
+    console.log(req.files)
 
     if ([fullname, email, username, password].some((field) => field?.trim() === "")) {
         throw new apiError(400, "All Fields are required")
@@ -45,19 +71,17 @@ const registerUser = asynchandler(async (req, res, next) => {
         }
     ) // ye query mein findOne ka use kiya gya hai then $or ka use kiya hai jo || opretor ka kaam karta hai then we use an array of object jismein username and email dono ki value check ki ja rahi hai. agr inme se koi ek bhi db se match kare toh wo user return kar dega otherwose null return karega. agr yaha $and ka use kiya hota toh dono ki value match karni chahiye thi. like && opretor
 
-    if (existedUser) new apiError(409, "User with email and username already exist") 
+    if (existedUser) new apiError(409, "User with email and username already exist")
     // agr user exist karta hai toh error throw karega otherwose null return karega
 
 
     // req.files?.avatar[0]?.path yaha main concept h. ki agr req.files? exist krti h toh .avatar ke array me se .avatar[0] first obj retriev kro or agr path ni hai .avatar[0]? toh .path use kro isse path mil jyga jo multer ne upload kiya hai.
-
     const avatarLocalPath = req.files?.avatar[0]?.path // req.files multer vaale middleware se mila hai jo humne user.routes.js me banya hai ye path hota hai jaha file store hoti hai
     const coverLocalPath = req.files?.coverImg[0]?.path // req.files multer vaale middleware se mila hai jo humne user.routes.js me banya hai ye path hota hai jaha file store hoti hai
 
-    // const finalAvatarLoacalPath = path.resolve(avatarLocalPath) // here we resolve the path of avatarLocalPath
-    // const finalCoverLocalPath = path.resolve(coverLocalPath) // here we resolve the path of coverLocalPath
-
     if (!avatarLocalPath) {
+        console.log('avatarLocalPath', avatarLocalPath);
+
         throw new apiError(400, "Avatar path is required") // here we check avatar is available or not. 
     }
 
@@ -91,5 +115,121 @@ const registerUser = asynchandler(async (req, res, next) => {
     )
 })
 
-export { registerUser }
+const loginUser = asynchandler(async (req, res, next) => {
+    // get user data from frontend || req.body -> data
+    // check if user or email exist or not
+    // find the user from db
+    // check for password
+    // generate access token and refresh token
+    // send token using cookies 
 
+
+    const { email, username, password } = req.body
+
+    if (!username) throw new apiError(400, "Username is required")
+
+    if (!email) throw new apiError(400, "Email is required")
+
+    const user = await User.findOne({
+        $or: [
+            { username },
+            { email }
+        ]
+    })
+
+
+    if (!user) throw new apiError(400, "User not found")
+
+    const checkPassword = await user.isPasswordCorret(password) // here we check password is correct or not using isPasswordCorret method that we created in user.model.js    
+
+    if (!checkPassword) throw new apiError(401, "Invalid Password")
+
+    const { refreshToken, accessToken } = await generateAccessAndRefreshToken(user._id)
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+    // ye likh kr humne ye ensue kia ki hum user ko password or refreshToken ni bhejege as responsew
+
+    const options = {
+        httpOnly: true, // ye dono flags h inko use krne se koi bhi tumri cookies ko edit ni kr skta. btw cookies UI me show hogi but nobody can edit it.
+        secure: true
+    }
+
+    return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new apiResponse(200, {
+                user: loggedInUser, accessToken, refreshToken
+            }, "User loggin successfully")
+        )
+})
+
+const loggedOutUser = asynchandler(async (req, res) => {
+    await User.findByIdAndUpdate(req.user?._id,
+        {
+            $set: {
+                refreshToken: undefined
+            }
+        },
+        {
+            new: true // we use it for getting respone updated
+        },
+    )
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(
+            new apiResponse(200, {}, "User Logged Out")
+        )
+
+    // for logout user we set our refrsh token undefined and clearCookie, cookies me accessToken or refreshToken h isiliye cookies delete ki aur refresh token bhi taaki logut successfully ho sake or accessToken is like session toh humne vo bhi khtm kr diya ab dubara login karna hoga then user get again refresh token and access token
+})
+
+const refreshAccessToken = asynchandler(async (req, res) => {
+    const incomingRefreshToken = req.cookies.refreshToken || req.body?.refreshToken
+    log(`incomingRefreshToken: ${incomingRefreshToken}`)
+    if (!incomingRefreshToken) throw new apiError(401, "Unauthorized Request")
+
+    // const userRefreshToken = await User.refreshToken
+    try {
+
+        const decodedRefreshToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+        const user = await User.findById(decodedRefreshToken?._id)
+        log(`user: ${user}`)
+        log(`decodedRefreshToken: ${decodedRefreshToken.payload}`)
+
+        if (!user) throw new apiError("401", "Invalid refresh token")
+        const userRefreshToken = user?.refreshToken
+
+        if (incomingRefreshToken !== userRefreshToken) throw new apiError(400, "Session Expired");
+
+        const { newRefreshToken, accessToken } = await generateAccessAndRefreshToken(decodedRefreshToken?._id)
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+
+        return res
+            .status(200)
+            .cookie("refreshToken", newRefreshToken, options)
+            .cookie("accessToken", accessToken, options)
+            .json(
+                new apiResponse(200, {
+                    newRefreshToken, accessToken
+                }, "Access token refreshed")
+            )
+
+    } catch (error) {
+        throw new apiError(401, error.message || "Invalid refresh token")
+    }
+
+})
+
+export { registerUser, loginUser, loggedOutUser, refreshAccessToken }
