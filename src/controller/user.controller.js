@@ -197,7 +197,6 @@ const refreshAccessToken = asynchandler(async (req, res) => {
     log(`incomingRefreshToken: ${incomingRefreshToken}`)
     if (!incomingRefreshToken) throw new apiError(401, "Unauthorized Request")
 
-    // const userRefreshToken = await User.refreshToken
     try {
 
         const decodedRefreshToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
@@ -210,7 +209,7 @@ const refreshAccessToken = asynchandler(async (req, res) => {
 
         if (incomingRefreshToken !== userRefreshToken) throw new apiError(400, "Session Expired");
 
-        const { newRefreshToken, accessToken } = await generateAccessAndRefreshToken(decodedRefreshToken?._id)
+        const { refreshToken, accessToken } = await generateAccessAndRefreshToken(decodedRefreshToken?._id)
         const options = {
             httpOnly: true,
             secure: true
@@ -218,11 +217,11 @@ const refreshAccessToken = asynchandler(async (req, res) => {
 
         return res
             .status(200)
-            .cookie("refreshToken", newRefreshToken, options)
+            .cookie("refreshToken", refreshToken, options)
             .cookie("accessToken", accessToken, options)
             .json(
                 new apiResponse(200, {
-                    newRefreshToken, accessToken
+                    accessToken, refreshToken
                 }, "Access token refreshed")
             )
 
