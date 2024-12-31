@@ -6,6 +6,7 @@ import { uploadOnCloudinary } from "../utils/cloudnary.js"
 import { log } from "console"
 import jwt from "jsonwebtoken";
 import { userInfo } from "os";
+import { secureHeapUsed } from "crypto";
 
 const generateAccessAndRefreshToken = async (userid) => {
     try {
@@ -231,4 +232,47 @@ const refreshAccessToken = asynchandler(async (req, res) => {
 
 })
 
-export { registerUser, loginUser, loggedOutUser, refreshAccessToken }
+const changeCurrentPassword = asynchandler(async (req, res) => {
+    const { oldPassword, newPassword, confirmPassword } = req.body
+
+    if (!(confirmPassword === newPassword)) throw new apiError(401, "Confirm password does not match the new password")
+
+    const user = await User.findById(req.user?._id)
+    if (!user) throw new apiError(400, "User not found")
+
+    const isPasswordCorrect  = await user.isPasswordCorrect (oldPassword)
+    if (!isPasswordCorrect ) throw new apiError(400, "Old Password is incorrect")
+
+    // setNewPassword = newPassword
+
+    const hasedNewPassword = await bcrypt.hash(newPassword, 10)
+    user.password = hasedNewPassword
+
+    user.refreshToken = null;
+    await user.save(
+        {
+            validateBeforeSave: false
+        }
+    )
+    const options={
+        httpOnly: true,
+        secure: true
+    }
+    
+    return res.status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(
+            new apiResponse(200, {}, "Password Changed Successfully, Please login now")
+        )
+})
+
+
+
+export {
+    registerUser,
+    loginUser,
+    loggedOutUser,
+    refreshAccessToken,
+    changeCurrentPassword,
+}

@@ -56,7 +56,7 @@ userSchema.pre("save", async function (next) { // here we dont use arrrow func c
 })
 
 // here we check that password exist or not.
-userSchema.methods.isPasswordCorret = async function (password) {
+userSchema.methods.isPasswordCorrect = async function (password) {
     return await bcrypt.compare(password, this.password) // compare is method that present in bcrypt pkg. for comparing password that already exist in db.
 }
 
