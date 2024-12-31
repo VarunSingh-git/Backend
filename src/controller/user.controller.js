@@ -5,8 +5,7 @@ import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudnary.js"
 import { log } from "console"
 import jwt from "jsonwebtoken";
-import { userInfo } from "os";
-import { secureHeapUsed } from "crypto";
+import bcrypt from "bcrypt"
 
 const generateAccessAndRefreshToken = async (userid) => {
     try {
@@ -141,7 +140,7 @@ const loginUser = asynchandler(async (req, res, next) => {
 
     if (!user) throw new apiError(400, "User not found")
 
-    const checkPassword = await user.isPasswordCorret(password) // here we check password is correct or not using isPasswordCorret method that we created in user.model.js    
+    const checkPassword = await user.isPasswordCorrect(password) // here we check password is correct or not using isPasswordCorret method that we created in user.model.js    
 
     if (!checkPassword) throw new apiError(401, "Invalid Password")
 
@@ -240,25 +239,27 @@ const changeCurrentPassword = asynchandler(async (req, res) => {
     const user = await User.findById(req.user?._id)
     if (!user) throw new apiError(400, "User not found")
 
-    const isPasswordCorrect  = await user.isPasswordCorrect (oldPassword)
-    if (!isPasswordCorrect ) throw new apiError(400, "Old Password is incorrect")
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+    if (!isPasswordCorrect) throw new apiError(400, "Old Password is incorrect")
+    console.log(user.password); // Yeh ab bhi accessible hoga
 
-    // setNewPassword = newPassword
-
-    const hasedNewPassword = await bcrypt.hash(newPassword, 10)
-    user.password = hasedNewPassword
+    user.password = newPassword
 
     user.refreshToken = null;
-    await user.save(
-        {
-            validateBeforeSave: false
-        }
-    )
-    const options={
+    try {
+        await user.save(
+            {
+                validateBeforeSave: false
+            }
+        )
+    } catch (error) {
+        throw new apiError(400, error.message || "Error occure during save info in DB")
+    }
+    const options = {
         httpOnly: true,
         secure: true
     }
-    
+
     return res.status(200)
         .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
