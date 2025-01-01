@@ -115,6 +115,7 @@ const registerUser = asynchandler(async (req, res, next) => {
     )
 })
 
+
 const loginUser = asynchandler(async (req, res, next) => {
     // get user data from frontend || req.body -> data
     // check if user or email exist or not
@@ -268,7 +269,51 @@ const changeCurrentPassword = asynchandler(async (req, res) => {
         )
 })
 
+const changeCurrentInfo = asynchandler(async (req, res) => {
 
+    const { newFullName, newEmail, newUsername} = req.body
+
+    if ([newFullName, newEmail, newUsername].some((field) => field?.trim() === "")) {
+        throw new apiError(400, "All Fields are required")
+    }
+
+
+    if (newFullName.length < 2 && newFullName.length == 0 && !email.includes("@") ||
+        newEmail.startsWith("@") ||
+        newEmail.endsWith("@") ||
+        newEmail.split("@").length !== 2 ||
+        newEmail.split("@")[1].indexOf(".") === -1 ||
+        newEmail.split("@")[1].startsWith(".") ||
+        newEmail.split(".").pop().length < 2) {
+        throw new apiError(400, "Invalid Creadentials")
+    }
+    const user = await User.findById(req.user?._id).select("-password -refreshToken")
+
+    if (user.fullname === newFullName && user.email === newEmail && user.username === newUsername) throw new apiError(401, "Please change the data either you can go step back")
+    if (!user) throw new apiError(400, "User not found")
+
+    user.fullname = newFullName
+    user.email = newEmail
+    user.username = newUsername
+
+    try {
+        await user.save(
+            {
+                validateBeforeSave: false
+            }
+        )
+    } catch (error) {
+        throw new apiError(400, error.message || "Error occure during save info in DB")
+    }
+
+    return res
+        .status(200)
+        .json(
+            new apiResponse(200, user, "Data Changed Successfully")
+        )
+
+
+})
 
 export {
     registerUser,
@@ -276,4 +321,5 @@ export {
     loggedOutUser,
     refreshAccessToken,
     changeCurrentPassword,
+    changeCurrentInfo
 }
