@@ -5,7 +5,9 @@ import {
     loggedOutUser,
     refreshAccessToken,
     changeCurrentPassword,
-    changeCurrentInfo
+    changeCurrentInfo,
+    avatarUpdate,
+    coverImgUpdate
 } from "../controller/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middlewares.js";
@@ -47,6 +49,21 @@ router.route("/change-CurrentPassword").post(
 router.route("/change-CurrentInfo").post(
     verifyJWT,
     changeCurrentInfo
+)
+
+router.route("/update-userAvatar").post(
+    verifyJWT,
+    upload.single( // ye fields use hota hai jab hum single file ko upload karna chahte hain. or yaha name frontend se aaya hai jo humne define kiya tha. maxCount use hota hai jab hum multiple files ko upload karna chahte hain or hume define karna hota hai ke kitne files ko upload karna hai.
+        'avatar'),
+    avatarUpdate
+)
+
+router.route("/update-userCoverImg").post(
+    verifyJWT,
+    upload.single(
+        'coverImg'
+    ),
+    coverImgUpdate
 )
 
 export default router;

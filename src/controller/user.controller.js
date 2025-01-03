@@ -271,14 +271,13 @@ const changeCurrentPassword = asynchandler(async (req, res) => {
 
 const changeCurrentInfo = asynchandler(async (req, res) => {
 
-    const { newFullName, newEmail, newUsername} = req.body
+    const { newFullName, newEmail, newUsername } = req.body
 
     if ([newFullName, newEmail, newUsername].some((field) => field?.trim() === "")) {
         throw new apiError(400, "All Fields are required")
     }
 
-
-    if (newFullName.length < 2 && newFullName.length == 0 && !email.includes("@") ||
+    if (newFullName.length < 2 && !email.includes("@") ||
         newEmail.startsWith("@") ||
         newEmail.endsWith("@") ||
         newEmail.split("@").length !== 2 ||
@@ -287,32 +286,85 @@ const changeCurrentInfo = asynchandler(async (req, res) => {
         newEmail.split(".").pop().length < 2) {
         throw new apiError(400, "Invalid Creadentials")
     }
-    const user = await User.findById(req.user?._id).select("-password -refreshToken")
+    const userForValidation = await User.findById(req.user?._id).select("-password -refreshToken")
 
-    if (user.fullname === newFullName && user.email === newEmail && user.username === newUsername) throw new apiError(401, "Please change the data either you can go step back")
-    if (!user) throw new apiError(400, "User not found")
-
-    user.fullname = newFullName
-    user.email = newEmail
-    user.username = newUsername
+    if (userForValidation.fullname === newFullName && userForValidation.email === newEmail && userForValidation.username === newUsername) throw new apiError(401, "Please change the data either you can go step back")
+    if (!userForValidation) throw new apiError(400, "User not found")
 
     try {
-        await user.save(
+        const user = await User.findByIdAndUpdate(req.user?._id,
             {
-                validateBeforeSave: false
+                $set: {
+                    newFullName,
+                    newEmail,
+                    newUsername
+                }
+            },
+            {
+                new: true // updated info / data return hoga aapko
             }
-        )
-    } catch (error) {
+        ).select("-password")
+
+
+        return res
+            .status(200)
+            .json(
+                new apiResponse(200, user, "Data Changed Successfully")
+            )
+
+    }
+    catch (error) {
         throw new apiError(400, error.message || "Error occure during save info in DB")
     }
+})
+
+const avatarUpdate = asynchandler(async (req, res) => {
+    const avatarLocalPath = req.file?.path
+
+    if (!avatarLocalPath) throw new apiError(400, "Avatar is file missing")
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    if (!avatar.url) throw new apiError(400, "Error while uploading Avatar")
+
+    const user = await User.findByIdAndUpdate(req.user?._id,
+        {
+            $set: {
+                avatar: avatar.url
+            }
+        },
+        {
+            new: true
+        }).select("-password")
 
     return res
         .status(200)
         .json(
-            new apiResponse(200, user, "Data Changed Successfully")
+            new apiResponse(200, user, "Avatar Update Successfully")
         )
+})
+const coverImgUpdate = asynchandler(async (req, res) => {
+    const coverImgLocalPath = req.file?.path
 
+    if (!coverImgLocalPath) throw new apiError(400, "Cover Image is file missing")
 
+    const coverImg = await uploadOnCloudinary(coverImgLocalPath)
+    if (!coverImg.url) throw new apiError(400, "Error while uploading Cover Image")
+
+    const user = await User.findByIdAndUpdate(req.user?._id,
+        {
+            $set: {
+                coverImg: coverImg.url
+            }
+        },
+        {
+            new: true
+        }).select("-password")
+
+    return res
+        .status(200)
+        .json(
+            new apiResponse(200, user, "Cover Image Update Successfully")
+        )
 })
 
 export {
@@ -321,5 +373,7 @@ export {
     loggedOutUser,
     refreshAccessToken,
     changeCurrentPassword,
-    changeCurrentInfo
+    changeCurrentInfo,
+    avatarUpdate,
+    coverImgUpdate
 }
