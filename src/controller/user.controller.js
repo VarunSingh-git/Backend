@@ -6,6 +6,7 @@ import { uploadOnCloudinary } from "../utils/cloudnary.js"
 import { log } from "console"
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt"
+// import { Aggregate } from "mongoose";
 
 const generateAccessAndRefreshToken = async (userid) => {
     try {
@@ -115,7 +116,6 @@ const registerUser = asynchandler(async (req, res, next) => {
     )
 })
 
-
 const loginUser = asynchandler(async (req, res, next) => {
     // get user data from frontend || req.body -> data
     // check if user or email exist or not
@@ -202,8 +202,6 @@ const refreshAccessToken = asynchandler(async (req, res) => {
 
         const decodedRefreshToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
         const user = await User.findById(decodedRefreshToken?._id)
-        log(`user: ${user}`)
-        log(`decodedRefreshToken: ${decodedRefreshToken.payload}`)
 
         if (!user) throw new apiError("401", "Invalid refresh token")
         const userRefreshToken = user?.refreshToken
@@ -277,7 +275,7 @@ const changeCurrentInfo = asynchandler(async (req, res) => {
         throw new apiError(400, "All Fields are required")
     }
 
-    if (newFullName.length < 2 && !email.includes("@") ||
+    if (newFullName.length <= 2 && !email.includes("@") ||
         newEmail.startsWith("@") ||
         newEmail.endsWith("@") ||
         newEmail.split("@").length !== 2 ||
@@ -338,10 +336,12 @@ const avatarUpdate = asynchandler(async (req, res) => {
 
     return res
         .status(200)
+        .header()
         .json(
             new apiResponse(200, user, "Avatar Update Successfully")
         )
 })
+
 const coverImgUpdate = asynchandler(async (req, res) => {
     const coverImgLocalPath = req.file?.path
 
@@ -367,6 +367,87 @@ const coverImgUpdate = asynchandler(async (req, res) => {
         )
 })
 
+const getCurrentUser = asynchandler(async (req, res) => {
+    return res
+        .status(200)
+        .json(
+            new apiResponse(200, req.user, "User Found")
+        )
+})
+
+const getUserChannelProfile = asynchandler(async (req, res) => {
+    const { username } = req.params // yaha humne req.params isliye use kiya h cuz jb bhi hum kisi channel ko visit krna chahte h toh uske parameters (URL) se hi usko access kr skte h. so this parameter is params
+    if (!username?.trim()) throw new apiError(400, "User not found")
+
+    // Agregation Pipeline start
+    const channel = await User.aggregate([
+        {
+            $match: {
+                username: username?.toLowerCase()
+                // aggregate use krne ke baad return value always array hoga 
+            }
+        },
+        // hum yaha lookup isiliye use kr rhe kyuki hum matched user ke basis p subscription dekh lenge
+        {
+            // subscription model me se subscription liya jo ek model name h,
+            $lookup: {
+                from: "subscriptions", // ye model h subscription.model.js file me se or (isko DB, model, table maan lo ye feilds contain kr skta h more then 1 at a time)
+
+                localField: "_id", // ye local field h hamare hi subscription model ka
+                foreignField: "channel", // ye foreign field h dusri tabla ka i.e. channel
+                as: "subscribers" // ye final result hold krega 
+
+                // this pipeline is use for finding subscribers
+            },
+            $lookup: {
+                from: "subscriptions", // isko DB, model, table maan lo ye feilds contain kr skta h more then 1 at a time
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscriberTo"
+                // this pipeline is use for track that how many channels are subscribed by me.
+            },
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers", // ye phle vaale lookup se aya h
+                },
+                channelSubscriberCount: {
+                    $size: "$subscriberTo", // ye dusre vaale lookup se aya h
+                },
+                // here we degsin functionality of subscribed button using if $condi and returning boolean value
+                isSubscribedChannel: {
+                    $cond: {
+                        if: {
+                            $in: [req.user?._id, "$subscribers.subscriber"]
+                            // $in ye array or object me sab dekh leta
+                        },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                fullname: 1,
+                username: 1,
+                subscribersCount: 1,
+                channelSubscriberCount: 1,
+                isSubscribedChannel: 1,
+                avatar: 1,
+                coverImg: 1
+            }
+        }
+    ])
+    console.log(channel)
+    if (!channel?.length) throw new apiError(404, "Channel not found")
+
+    return res
+        .status(200)
+        .json(
+            new apiResponse(200, channel[0], "User Chanel fetched")
+        )
+})
+
 export {
     registerUser,
     loginUser,
@@ -375,5 +456,7 @@ export {
     changeCurrentPassword,
     changeCurrentInfo,
     avatarUpdate,
-    coverImgUpdate
+    coverImgUpdate,
+    getCurrentUser,
+    getUserChannelProfile,
 }

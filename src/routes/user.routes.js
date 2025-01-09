@@ -51,7 +51,7 @@ router.route("/change-CurrentInfo").post(
     changeCurrentInfo
 )
 
-router.route("/update-userAvatar").post(
+router.route("/update-userAvatar").put(
     verifyJWT,
     upload.single( // ye fields use hota hai jab hum single file ko upload karna chahte hain. or yaha name frontend se aaya hai jo humne define kiya tha. maxCount use hota hai jab hum multiple files ko upload karna chahte hain or hume define karna hota hai ke kitne files ko upload karna hai.
         'avatar'),
