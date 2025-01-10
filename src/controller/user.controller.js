@@ -6,7 +6,7 @@ import { uploadOnCloudinary } from "../utils/cloudnary.js"
 import { log } from "console"
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt"
-// import { Aggregate } from "mongoose";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userid) => {
     try {
@@ -448,6 +448,70 @@ const getUserChannelProfile = asynchandler(async (req, res) => {
         )
 })
 
+// Note: MongoDB ki jo _id h vo hume ek string milti h na ki koi actual id 
+// i.e. ObjectId('746bsd1281368nd') kuch iss trh ki dikhti h id but...
+// jab hum uss _id ko use krte hai mongoose ke though like findById toh...
+// mongoose uss _id ko (jo ki ek string h) behind the secen khud handle karta hai
+const getWatchHistory = asynchandler(async (req, res) => {
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user._id)
+                // id string hoti ha so we use Types.ObjectId(req.user._id).
+                // yaha Types me bata rhe hai ki (req.user._id) ka type ObjectId hai
+                // yaha (req.user._id) isiliye use kiya taaki authenticated user ka _id hi mile
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullname: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields: {
+                            owner: {
+                                $first: "$owner"
+                                // owner ek field h jo video.model.js me hai so we use $owner
+                            }
+                        }
+                    }
+                    // ref: chai or backend video no. 20 
+                ]
+            }
+            // yaha pe videos humne video.model.js se liya hai 
+            // watchHistory hamara local feild h user.model.js se
+            // foreign feild hamara vo fiedl hai jo video.model.js me h
+            // toh yaha pe humne ye pipeline user.model.js me likhi h
+            // kyuki localField: "watchHistory" h. jo ki user.model.js me h
+        }
+    ])
+
+    return res
+        .status(200)
+        .json(
+            new apiResponse(200, user[0].watchHistory, "Watch History Fetch Successfully")
+        )
+})
+
 export {
     registerUser,
     loginUser,
@@ -459,4 +523,5 @@ export {
     coverImgUpdate,
     getCurrentUser,
     getUserChannelProfile,
+    getWatchHistory
 }
