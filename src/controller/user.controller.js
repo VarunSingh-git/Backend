@@ -2,7 +2,7 @@ import { apiError } from "../utils/apiError.js";
 import { asynchandler } from "../utils/async.handler.js";
 import { apiResponse } from "../utils/apiResponse.js"
 import { User } from "../models/user.model.js"
-import { uploadOnCloudinary } from "../utils/cloudnary.js"
+import { uploadOnCloudinary, getPublicId, deleteFromCloudinary } from "../utils/cloudnary.js"
 import { log } from "console"
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt"
@@ -169,8 +169,8 @@ const loginUser = asynchandler(async (req, res, next) => {
 const loggedOutUser = asynchandler(async (req, res) => {
     await User.findByIdAndUpdate(req.user?._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1 // for remove RefreshToken from DB
             }
         },
         {
@@ -367,6 +367,32 @@ const coverImgUpdate = asynchandler(async (req, res) => {
         )
 })
 
+const deleteCoverImg = asynchandler(async (req, res) => {
+    const user = await User.findById(req.user?._id)
+    if (!user || !user.coverImg) throw new apiError(401, "User or cover image not found")
+
+    const url = user?.coverImg;
+    const publicId = getPublicId(url)
+    
+    const deleteCoverImgFromCloudinary = deleteFromCloudinary(publicId)
+    if (!deleteCoverImgFromCloudinary) throw new apiError(401, "Task failed due to server error... Try again")
+
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $unset: {
+                coverImg: 1
+            }
+        },
+        {
+            new: true
+        }
+    );
+    return res
+        .status(200)
+        .json(new apiResponse(200, updatedUser, "Cover Image Delete Successfully"))
+
+})
 const getCurrentUser = asynchandler(async (req, res) => {
     return res
         .status(200)
@@ -523,5 +549,6 @@ export {
     coverImgUpdate,
     getCurrentUser,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    deleteCoverImg
 }
