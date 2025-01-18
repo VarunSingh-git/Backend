@@ -20,15 +20,10 @@ const getPublicId = (url) => {
 const deleteFromCloudinary = async (publicId) => {
     try {
         await cloudinary.uploader.destroy(publicId);
-    //     return res
-    //         .status(200)
-    //         .json(
-    //             new apiResponse(200, result, "Cover Image deleted Successfully")
-    //         )
     }
 
     catch (error) {
-        throw new apiError(400, error || "Error occur during deleting cover image")
+        throw new apiError(400, error || "Server Error Occur! Try Again")
     }
 }
 
@@ -39,10 +34,8 @@ const uploadOnCloudinary = async (localFilePath) => {
         const respone = await cloudinary.uploader.upload(localFilePath, {
             resource_type: "auto"
         })
-        // console.log(`response: ${respone}`)
         fs.unlinkSync(localFilePath) // remove the locally saved file as the upload operation go failed either success
-        return respone
-
+        return respone   
     }
     catch (err) {
         fs.unlinkSync(localFilePath) // remove the locally saved file as the upload operation go failed either success
