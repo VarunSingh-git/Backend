@@ -4,7 +4,7 @@ import { User } from "../models/user.model.js"
 import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js"
 import { asynchandler } from "../utils/async.handler.js"
-import { uploadOnCloudinary } from "../utils/cloudnary.js"
+import { getPublicId, uploadOnCloudinary, updateOnCloudinary } from "../utils/cloudnary.js"
 
 
 const getAllVideos = asynchandler(async (req, res) => {
@@ -26,8 +26,8 @@ const publishAVideo = asynchandler(async (req, res) => {
     console.log('VideoExtension', VideoExtension)
     console.log('thumbnailExtension', thumbnailExtension)
 
-    if (!videoExtensionsType.includes(VideoExtension)) throw new apiError(400, "Invalid Video Type")
-    if (!imageExtensionType.includes(thumbnailExtension)) throw new apiError(400, "Invalid Thumbanail Type")
+    if (!videoExtensionsType.includes(VideoExtension)) throw new apiError(400, "Please select a video")
+    if (!imageExtensionType.includes(thumbnailExtension)) throw new apiError(400, "Please select a thumbnail")
 
     // title ko validate kiya 
     console.log('title', title)
@@ -42,6 +42,8 @@ const publishAVideo = asynchandler(async (req, res) => {
     // clodinary pe file uploading ke liye multer se file path liya for storing it in local server then upload on clodinary 
     const videoFileLocalPath = req.files?.videoFile[0]?.path
     const thumbnailFileLocalPath = req.files?.thumbnail[0]?.path
+    console.log(videoFileLocalPath);
+    console.log(thumbnailFileLocalPath);
 
     const uploadedVideoFile = await uploadOnCloudinary(videoFileLocalPath)
     const uploadedThumbna1il = await uploadOnCloudinary(thumbnailFileLocalPath)
@@ -72,13 +74,89 @@ const publishAVideo = asynchandler(async (req, res) => {
 
 const getVideoById = asynchandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: get video by id
+    // yaha humne req.params me se humne videoId extract kr liya jo dynamic route h or ek route variable bhi
+    console.log(videoId);
+
+    const findedVideo = await Video.findOne({
+        // yaha humne findOne ka use krte hue _id (jo existing video id h) or videoId (jo postman me url me diya h)
+        // inn dono ko match kiya, then reponse send kiya
+        _id: videoId
+    })
+    console.log(findedVideo);
+
+    if (!findedVideo) throw new apiError(400, "Video Not Found")
+
+    return res
+        .status(200)
+        .json(
+            new apiResponse(200, id, "Video Found")
+        )
 })
 
 const updateVideo = asynchandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: update video details like title, description, thumbnail
+    const { video, thumbnail, title, description } = req.body
 
+    const videoFromDB = await Video.findOne({
+        _id: videoId
+    })
+
+    if (!videoFromDB) throw new apiError(401, "Video not found")
+
+    const videoExtensionsType = ["video/mp4", "video/avi", "video/mkv"];
+    const imageExtensionType = ['image/jpeg', 'image/png', 'image/jpg', 'image/tiff']
+
+    const VideoExtension = req.files?.videoFile?.[0]?.mimetype
+    const thumbnailExtension = req.files?.thumbnail?.[0]?.mimetype
+
+    if (!videoExtensionsType.includes(VideoExtension)) throw new apiError(400, "Invalid video type")
+    if (!imageExtensionType.includes(thumbnailExtension)) throw new apiError(400, "Invalid thumbnail type")
+
+    if (!title) throw new apiError(402, "Title was not found")
+    if (title.length <= 8 || title.length >= 25) throw new apiError(402, "Title should be more then 8 characters long or less then 25 characters")
+
+    // description ko validate kiya 
+    if (!description.toString()) throw new apiError(401, "Kindly give some description")
+    console.log('descriptionValidate', typeof (description))
+
+    if (description.length >= 100 || description.length <= 10) throw new apiError(402, "Description should be contain more then 10 characters or less then 100 characters")
+
+    const videoUrl = videoFromDB.videoFile
+    const videoPublicId = getPublicId(videoUrl)
+
+    const thumbanilUrl = videoFromDB.videoFile
+    const thumbanilPublicId = getPublicId(thumbanilUrl)
+
+    const videoFileLocalPath = req.files?.videoFile[0]?.path
+    const thumbnailFileLocalPath = req.files?.thumbnail[0]?.path
+
+    const updatedVideoFile = await updateOnCloudinary(videoFileLocalPath, videoPublicId)
+    const updatedThumbna1il = await updateOnCloudinary(thumbnailFileLocalPath, thumbanilPublicId)
+
+    if (!(updatedVideoFile || updatedThumbna1il)) throw new apiError(401, "Video or thumbanil is required")
+
+    const updateAllDetailsInDB = await Video.findByIdAndUpdate(
+        videoFromDB?._id,
+        {
+            $set: {
+                videoFile: updatedVideoFile?.secure_url,
+                thumbnail: updatedThumbna1il?.secure_url,
+                discription: description,
+                title: title,
+                duration: updatedVideoFile?.duration
+            }
+        },
+        {
+            new: true
+        }
+    )
+    if (!updateAllDetailsInDB) throw new apiError(500, "Server error, Please try again")
+
+    return res
+        .status(200)
+        .json(
+            new apiResponse(200, updateAllDetailsInDB, "Video Update Successfully")
+        )
 })
 
 const deleteVideo = asynchandler(async (req, res) => {

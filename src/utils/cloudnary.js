@@ -26,6 +26,21 @@ const deleteFromCloudinary = async (publicId) => {
         throw new apiError(400, error || "Server Error Occur! Try Again")
     }
 }
+const updateOnCloudinary = async (localFilePath, publicId) => {
+    if (!localFilePath) { return null }
+    try {
+        const result = await cloudinary.uploader.upload(localFilePath, {
+            public_id: publicId,
+            overwrite: true,
+            resource_type: "auto"
+        })
+        fs.unlinkSync(localFilePath) // remove the locally saved file as the upload operation go failed either success
+        return result
+    } catch (error) {
+        fs.unlinkSync(localFilePath)
+        throw new apiError(400, "Couldn't update video" || error.message)
+    }
+}
 
 const uploadOnCloudinary = async (localFilePath) => {
     try {
@@ -35,7 +50,7 @@ const uploadOnCloudinary = async (localFilePath) => {
             resource_type: "auto"
         })
         fs.unlinkSync(localFilePath) // remove the locally saved file as the upload operation go failed either success
-        return respone   
+        return respone
     }
     catch (err) {
         fs.unlinkSync(localFilePath) // remove the locally saved file as the upload operation go failed either success
@@ -46,7 +61,8 @@ const uploadOnCloudinary = async (localFilePath) => {
 export {
     uploadOnCloudinary,
     getPublicId,
-    deleteFromCloudinary
+    deleteFromCloudinary,
+    updateOnCloudinary
 }
 
 // const uploadResult = await cloudinary.uploader
