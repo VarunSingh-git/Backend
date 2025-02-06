@@ -1,33 +1,26 @@
-import mongoose, {isValidObjectId} from "mongoose"
-import {Like} from "../models/like.model.js"
+import mongoose, { isValidObjectId } from "mongoose";
+import { Like } from "../models/like.model.js";
 import { apiError } from "../utils/apiError.js";
-import { apiResponse } from "../utils/apiResponse.js"
-import {asynchandler} from "../utils/async.handler.js"
+import { apiResponse } from "../utils/apiResponse.js";
+import { asynchandler } from "../utils/async.handler.js";
 
 const toggleVideoLike = asynchandler(async (req, res) => {
-    const {videoId} = req.params
-    //TODO: toggle like on video
-})
+  const { videoId } = req.params;
+  //TODO: toggle like on video
+});
 
 const toggleCommentLike = asynchandler(async (req, res) => {
-    const {commentId} = req.params
-    //TODO: toggle like on comment
-
-})
+  const { commentId } = req.params;
+  //TODO: toggle like on comment
+});
 
 const toggleTweetLike = asynchandler(async (req, res) => {
-    const {tweetId} = req.params
-    //TODO: toggle like on tweet
-}
-)
+  const { tweetId } = req.params;
+  //TODO: toggle like on tweet
+});
 
 const getLikedVideos = asynchandler(async (req, res) => {
-    //TODO: get all liked videos
-})
+  //TODO: get all liked videos
+});
 
-export {
-    toggleCommentLike,
-    toggleTweetLike,
-    toggleVideoLike,
-    getLikedVideos
-}
+export { toggleCommentLike, toggleTweetLike, toggleVideoLike, getLikedVideos };

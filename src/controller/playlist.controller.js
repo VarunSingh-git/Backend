@@ -1,53 +1,51 @@
-import mongoose, { isValidObjectId } from "mongoose"
-import { PlayList } from "../models/playlist.model.js"
+import mongoose, { isValidObjectId } from "mongoose";
+import { PlayList } from "../models/playlist.model.js";
 import { apiError } from "../utils/apiError.js";
-import { apiResponse } from "../utils/apiResponse.js"
-import { asynchandler } from "../utils/async.handler.js"
-
+import { apiResponse } from "../utils/apiResponse.js";
+import { asynchandler } from "../utils/async.handler.js";
 
 const createPlaylist = asynchandler(async (req, res) => {
-    const { name, description } = req.body
+  const { name, description } = req.body;
 
-    //TODO: create playlist
-})
+  //TODO: create playlist
+});
 
 const getUserPlaylists = asynchandler(async (req, res) => {
-    const { userId } = req.params
-    //TODO: get user playlists
-})
+  const { userId } = req.params;
+  //TODO: get user playlists
+});
 
 const getPlaylistById = asynchandler(async (req, res) => {
-    const { playlistId } = req.params
-    //TODO: get playlist by id
-})
+  const { playlistId } = req.params;
+  //TODO: get playlist by id
+});
 
 const addVideoToPlaylist = asynchandler(async (req, res) => {
-    const { playlistId, videoId } = req.params
-})
+  const { playlistId, videoId } = req.params;
+});
 
 const removeVideoFromPlaylist = asynchandler(async (req, res) => {
-    const { playlistId, videoId } = req.params
-    // TODO: remove video from playlist
-
-})
+  const { playlistId, videoId } = req.params;
+  // TODO: remove video from playlist
+});
 
 const deletePlaylist = asynchandler(async (req, res) => {
-    const { playlistId } = req.params
-    // TODO: delete playlist
-})
+  const { playlistId } = req.params;
+  // TODO: delete playlist
+});
 
 const updatePlaylist = asynchandler(async (req, res) => {
-    const { playlistId } = req.params
-    const { name, description } = req.body
-    //TODO: update playlist
-})
+  const { playlistId } = req.params;
+  const { name, description } = req.body;
+  //TODO: update playlist
+});
 
 export {
-    createPlaylist,
-    getUserPlaylists,
-    getPlaylistById,
-    addVideoToPlaylist,
-    removeVideoFromPlaylist,
-    deletePlaylist,
-    updatePlaylist
-}
+  createPlaylist,
+  getUserPlaylists,
+  getPlaylistById,
+  addVideoToPlaylist,
+  removeVideoFromPlaylist,
+  deletePlaylist,
+  updatePlaylist,
+};
