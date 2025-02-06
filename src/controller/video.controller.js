@@ -1,9 +1,8 @@
-import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.model.js";
-import { User } from "../models/user.model.js";
 import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { asynchandler } from "../utils/async.handler.js";
+import { User } from "../models/user.model.js";
 import {
   validateMongoDB_ID,
   cheackIdExistence,
@@ -78,10 +77,16 @@ const publishAVideo = asynchandler(async (req, res) => {
     title: title,
     discription: description,
     duration: uploadedVideoFile.duration,
+    owner: req.user?._id,
   });
 
   // document find karke id ke base pe usko as response send kiya
-  const confirmCreateVideo = await Video.findById(video._id);
+  const confirmCreateVideo = await Video.findById(video._id).populate({
+    path: "owner",
+    select: "username email avatar",
+    options: { strictPopulate: false },
+  });
+
   if (!confirmCreateVideo)
     throw new apiError(500, "Something went wrong while publishing video");
   // req object ke andar video bhi daal diya jese auth.middlewares me user dala tha req ke andar for further usage
@@ -107,7 +112,8 @@ const getVideoById = asynchandler(async (req, res) => {
     // yaha humne findOne ka use krte hue _id (jo existing video id h) or videoId (jo postman me url me diya h)
     // inn dono ko match kiya, then reponse send kiya
     _id: videoId,
-  });
+  }).populate("owner", "username email avatar");
+  
   console.log(findedVideo);
 
   if (!findedVideo) throw new apiError(404, "Video Not Found");
@@ -229,6 +235,44 @@ const deleteVideo = asynchandler(async (req, res) => {
 
 const togglePublishStatus = asynchandler(async (req, res) => {
   const { videoId } = req.params;
+
+  isStrictValidateId(videoId);
+  validateMongoDB_ID(videoId);
+  await cheackIdExistence(videoId);
+
+  const videoFromDB = await Video.findOne({
+    _id: videoId,
+  });
+
+  if (!videoFromDB) throw new apiError(401, "Video not found");
+
+  if (videoFromDB.isPublished === true) {
+    videoFromDB.isPublished = false;
+  } else {
+    videoFromDB.isPublished = true;
+  }
+
+  const toggleVideoStatusFromDB = await Video.findByIdAndUpdate(
+    videoFromDB?._id,
+    {
+      $set: {
+        isPublished: videoFromDB.isPublished,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  return res
+    .status(200)
+    .json(
+      new apiResponse(
+        200,
+        toggleVideoStatusFromDB,
+        "Video publish status toggled successfully"
+      )
+    );
 });
 
 export {
