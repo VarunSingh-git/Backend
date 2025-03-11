@@ -40,16 +40,16 @@ const publishAVideo = asynchandler(async (req, res) => {
   console.log("thumbnailExtension", thumbnailExtension);
 
   if (!videoExtensionsType.includes(VideoExtension))
-    throw new apiError(400, "Please select a video");
+    throw new apiError(400, "Invalid video type");
   if (!imageExtensionType.includes(thumbnailExtension))
-    throw new apiError(400, "Please select a thumbnail");
+    throw new apiError(400, "Invalid thumbnail type");
 
   // title ko validate kiya
   console.log("title", title);
-  if (!title.toString()) throw new apiError(402, "Invalid Title");
+  if (!title.toString()) throw new apiError(402, "Invalid title");
 
   // description ko validate kiya
-  if (!description.toString()) throw new apiError(401, "Invalid Description");
+  if (!description.toString()) throw new apiError(401, "Invalid description");
   console.log("descriptionValidate", typeof description);
 
   if (description.length >= 100 || description.length <= 10)
@@ -104,7 +104,7 @@ const getVideoById = asynchandler(async (req, res) => {
 
   isStrictValidateId(videoId);
   validateMongoDB_ID(videoId);
-  await cheackIdExistence(videoId);
+  await cheackIdExistence(videoId, Video);
 
   // yaha humne req.params me se humne videoId extract kr liya jo dynamic route h or ek route variable bhi
 
@@ -113,7 +113,7 @@ const getVideoById = asynchandler(async (req, res) => {
     // inn dono ko match kiya, then reponse send kiya
     _id: videoId,
   }).populate("owner", "username email avatar");
-  
+
   console.log(findedVideo);
 
   if (!findedVideo) throw new apiError(404, "Video Not Found");
@@ -126,7 +126,7 @@ const updateVideo = asynchandler(async (req, res) => {
 
   isStrictValidateId(videoId);
   validateMongoDB_ID(videoId);
-  await cheackIdExistence(videoId);
+  await cheackIdExistence(videoId, Video);
 
   const { video, thumbnail, title, description } = req.body;
 
@@ -134,7 +134,7 @@ const updateVideo = asynchandler(async (req, res) => {
     _id: videoId,
   });
 
-  if (!videoFromDB) throw new apiError(401, "Video not found");
+  if (!videoFromDB) throw new apiError(404, "Video not found");
   console.log(videoFromDB);
 
   const videoExtensionsType = ["video/mp4", "video/avi", "video/mkv"];
@@ -211,7 +211,7 @@ const deleteVideo = asynchandler(async (req, res) => {
   const { videoId } = req.params;
   isStrictValidateId(videoId);
   validateMongoDB_ID(videoId);
-  await cheackIdExistence(videoId);
+  await cheackIdExistence(videoId, Video);
 
   const findVideoById = await Video.findOne({
     _id: videoId,
@@ -226,8 +226,9 @@ const deleteVideo = asynchandler(async (req, res) => {
   const deletedVideoFromCloudinary = deleteFromCloudinary(videoPublicId);
   if (!deletedVideoFromCloudinary)
     throw new apiError(401, "Task fail, video couldn't be deleted");
-  await Video.deleteOne(findVideoById?._id);
-
+  const deletedVideoStatus = await Video.deleteOne(findVideoById?._id);
+  if (!deletedVideoStatus)
+    throw new apiError(401, "Task fail, video couldn't be deleted");
   return res
     .status(200)
     .json(new apiResponse(200, {}, "Video Deleted Successfully"));
@@ -238,7 +239,7 @@ const togglePublishStatus = asynchandler(async (req, res) => {
 
   isStrictValidateId(videoId);
   validateMongoDB_ID(videoId);
-  await cheackIdExistence(videoId);
+  await cheackIdExistence(videoId, Video);
 
   const videoFromDB = await Video.findOne({
     _id: videoId,

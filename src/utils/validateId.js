@@ -9,9 +9,9 @@ const isStrictValidateId = (mongoDB_id) => {
   }
   return;
 };
-const cheackIdExistence = async (mongoDB_id) => {
-  const doesIdExist = await Video.findById(mongoDB_id);
-  if (!doesIdExist) throw new apiError(400, "Video not found!");
+const cheackIdExistence = async (mongoDB_id, model) => {
+  const doesIdExist = await model.findById(mongoDB_id);
+  if (!doesIdExist) throw new apiError(400, "Record not found!");
 };
 
 const validateMongoDB_ID = (mongoDB_id) => {
