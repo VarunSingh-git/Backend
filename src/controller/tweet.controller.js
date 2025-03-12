@@ -59,9 +59,8 @@ const getUserTweets = asynchandler(async (req, res) => {
   const userTweet = await Tweet.find({ owner: userId })
     .populate({ path: "owner", select: "username avatar -_id" })
     .select("owner content updatedAt createdAt _id");
-
-  if (!userTweet.content)
-    throw new apiError(404, "Tweet not found");
+  console.log(userTweet[0]?.content);
+  if (!userTweet[0]?.content) throw new apiError(404, "Tweet not found");
 
   return res.status(200).json(new apiResponse(200, userTweet, "Tweet found"));
 });
@@ -76,7 +75,7 @@ const updateTweet = asynchandler(async (req, res) => {
 
   if (!tweetId) throw new apiError(404, "Tweet not found");
   const userTweet = await Tweet.findById(tweetId);
-  console.log(`userTweet`, userTweet);
+
   if (userTweet.owner.toString() !== req.user?._id.toString())
     throw new apiError(403, "Unauthorized request");
 
@@ -88,8 +87,15 @@ const updateTweet = asynchandler(async (req, res) => {
       "Tweet should be contain more then 5 or more less then 250 characters"
     );
 
-  // const updatedTweet = await Tweet.findByIdAndUpdate
-  //   .findOneAndUpdate()
+  if (userTweet.content == tweet)
+    throw new apiError(301, "Tweet already updated");
+
+  userTweet.content = tweet;
+  await userTweet.save();
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, updatedTweet, "Tweet updated successfully"));
 });
 
 const deleteTweet = asynchandler(async (req, res) => {
@@ -105,7 +111,7 @@ const deleteTweet = asynchandler(async (req, res) => {
   if (userTweet.owner.toString() !== req.user?._id.toString())
     throw new apiError(403, "Unauthorized request");
 
-  const deletedTweet = await Tweet.deleteOne({ _id: tweetId }, { new: true });
+  const deletedTweet = await Tweet.deleteOne({ _id: tweetId });
 
   if (!deletedTweet) throw new apiError(500, "Tweet deletion failed..!");
   return res.status(200).json(new apiResponse(200, "Tweet Deleted"));
