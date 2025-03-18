@@ -34,8 +34,19 @@ const videoSchema = new Schema(
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      
     },
+    comments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Comment",
+      },
+    ],
+    like: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Like",
+      },
+    ],
   },
   {
     timestamps: true,

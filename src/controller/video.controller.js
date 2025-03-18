@@ -61,8 +61,8 @@ const publishAVideo = asynchandler(async (req, res) => {
   // clodinary pe file uploading ke liye multer se file path liya for storing it in local server then upload on clodinary
   const videoFileLocalPath = req.files?.videoFile[0]?.path;
   const thumbnailFileLocalPath = req.files?.thumbnail[0]?.path;
-  console.log(videoFileLocalPath);
-  console.log(thumbnailFileLocalPath);
+  // console.log(videoFileLocalPath);
+  // console.log(thumbnailFileLocalPath);
 
   const uploadedVideoFile = await uploadOnCloudinary(videoFileLocalPath);
   const uploadedThumbna1il = await uploadOnCloudinary(thumbnailFileLocalPath);
@@ -84,7 +84,6 @@ const publishAVideo = asynchandler(async (req, res) => {
   const confirmCreateVideo = await Video.findById(video._id).populate({
     path: "owner",
     select: "username email avatar",
-    options: { strictPopulate: false },
   });
 
   if (!confirmCreateVideo)
@@ -112,9 +111,27 @@ const getVideoById = asynchandler(async (req, res) => {
     // yaha humne findOne ka use krte hue _id (jo existing video id h) or videoId (jo postman me url me diya h)
     // inn dono ko match kiya, then reponse send kiya
     _id: videoId,
-  }).populate("owner", "username email avatar");
+  }).populate([
+    { path: "owner", select: "username email avatar" },
+    {
+      path: "comments",
+      select: "comment owner",
+      populate: {
+        path: "owner",
+        select: "username avatar",
+      },
+    },
+    {
+      path: "like",
+      select: "like owner",
+      populate: {
+        path: "owner",
+        select: "username avatar",
+      },
+    },
+  ]);
 
-  console.log(findedVideo);
+  console.log(`findedVideo: ${findedVideo}`);
 
   if (!findedVideo) throw new apiError(404, "Video Not Found");
 
@@ -217,18 +234,21 @@ const deleteVideo = asynchandler(async (req, res) => {
     _id: videoId,
   });
 
-  console.log(findVideoById);
   if (!findVideoById) throw new apiError(400, "Record not found");
   const videoUrl = findVideoById.videoFile;
-  console.log(videoUrl);
+
   const videoPublicId = getPublicId(videoUrl);
-  console.log(videoPublicId);
-  const deletedVideoFromCloudinary = deleteFromCloudinary(videoPublicId);
+
+  const deletedVideoFromCloudinary = await deleteFromCloudinary(videoPublicId);
+
   if (!deletedVideoFromCloudinary)
     throw new apiError(401, "Task fail, video couldn't be deleted");
-  const deletedVideoStatus = await Video.deleteOne(findVideoById?._id);
-  if (!deletedVideoStatus)
+
+  const deletedVideoStatus = await Video.deleteOne({ _id: videoId });
+
+  if (deletedVideoStatus.deletedCount === 0)
     throw new apiError(401, "Task fail, video couldn't be deleted");
+
   return res
     .status(200)
     .json(new apiResponse(200, {}, "Video Deleted Successfully"));

@@ -128,16 +128,16 @@ const loginUser = asynchandler(async (req, res, next) => {
 
   const { email, username, password } = req.body;
 
-  if (!username) throw new apiError(400, "Username is required");
-
-  if (!email) throw new apiError(400, "Email is required");
+  if (!(username || email))
+    throw new apiError(400, "Username or email is required");
 
   const user = await User.findOne({
     $or: [{ username }, { email }],
   });
 
   if (!user) throw new apiError(400, "User not found");
-
+  if (user.email !== email || user.username !== username)
+    throw new apiError(403, "Invalid credentials");
   const checkPassword = await user.isPasswordCorrect(password); // here we check password is correct or not using isPasswordCorret method that we created in user.model.js
 
   if (!checkPassword) throw new apiError(401, "Invalid Password");
