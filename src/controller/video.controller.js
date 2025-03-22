@@ -16,7 +16,10 @@ import {
 } from "../utils/cloudnary.js";
 
 const getAllVideos = asynchandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+  const { query, sortBy, sortType, userId } = req.query;
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+
   //TODO: get all videos based on query, sort, pagination
 });
 
@@ -115,7 +118,7 @@ const getVideoById = asynchandler(async (req, res) => {
     { path: "owner", select: "username email avatar" },
     {
       path: "comments",
-      select: "comment owner",
+      select: "comment owner createdAt updatedAt",
       populate: {
         path: "owner",
         select: "username avatar",
@@ -123,7 +126,7 @@ const getVideoById = asynchandler(async (req, res) => {
     },
     {
       path: "like",
-      select: "like owner",
+      select: "like owner createdAt updatedAt",
       populate: {
         path: "owner",
         select: "username avatar",
@@ -134,8 +137,17 @@ const getVideoById = asynchandler(async (req, res) => {
   console.log(`findedVideo: ${findedVideo}`);
 
   if (!findedVideo) throw new apiError(404, "Video Not Found");
-
-  return res.status(200).json(new apiResponse(200, findedVideo, "Video Found"));
+  const commentLength = findedVideo.comments.length;
+  const likeLength = findedVideo.like.length;
+  return res
+    .status(200)
+    .json(
+      new apiResponse(
+        200,
+        { findedVideo, likeLength, commentLength },
+        "Video Found"
+      )
+    );
 });
 
 const updateVideo = asynchandler(async (req, res) => {

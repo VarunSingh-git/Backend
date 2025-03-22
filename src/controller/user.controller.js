@@ -44,8 +44,8 @@ const registerUser = asynchandler(async (req, res, next) => {
   // return respone
 
   const { fullname, email, username, password } = req.body;
-  console.log("req.body", req.body);
-  console.log(req.files);
+  // console.log("req.body", req.body);
+  // console.log(req.files);
 
   if (
     [fullname, email, username, password].some((field) => field?.trim() === "")
@@ -79,7 +79,7 @@ const registerUser = asynchandler(async (req, res, next) => {
   const coverLocalPath = req.files?.coverImg[0]?.path; // req.files multer vaale middleware se mila hai jo humne user.routes.js me banya hai ye path hota hai jaha file store hoti hai
 
   if (!avatarLocalPath) {
-    console.log("avatarLocalPath", avatarLocalPath);
+    // console.log("avatarLocalPath", avatarLocalPath);
 
     throw new apiError(400, "Avatar path is required"); // here we check avatar is available or not.
   }
@@ -87,9 +87,9 @@ const registerUser = asynchandler(async (req, res, next) => {
   const avatar = await uploadOnCloudinary(avatarLocalPath); // here we uplaod avatar on cloudinary using await cuz uploading me time lgta ha
   const coverImg = await uploadOnCloudinary(coverLocalPath); // here we uplaod coverImg on cloudinary using await cuz uploading me time lgta ha
 
-  console.log("coverLocalPath", coverLocalPath);
-  console.log("avatarLocalPath", avatarLocalPath);
-  console.log("existedUser", existedUser);
+  // console.log("coverLocalPath", coverLocalPath);
+  // console.log("avatarLocalPath", avatarLocalPath);
+  // console.log("existedUser", existedUser);
 
   if (!avatar) throw new apiError(400, "Avatar is required"); // checking avatar is available on cloudinary
   if (!coverImg) throw new apiError(400, "Cover Image is required"); // checking coverImg is available on cloudinary
@@ -152,8 +152,9 @@ const loginUser = asynchandler(async (req, res, next) => {
   // ye likh kr humne ye ensue kia ki hum user ko password or refreshToken ni bhejege as responsew
 
   const options = {
-    httpOnly: true, // ye dono flags h inko use krne se koi bhi tumri cookies ko edit ni kr skta. btw cookies UI me show hogi but nobody can edit it.
+    httpOnly: true,
     secure: true,
+    // ye dono flags h inko use krne se koi bhi tumri cookies ko edit ni kr skta. btw cookies UI me show hogi but nobody can edit it.
   };
 
   return res

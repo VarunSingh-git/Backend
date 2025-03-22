@@ -10,6 +10,12 @@ const tweetSchema = new Schema(
       type: String,
       required: true,
     },
+    like: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Like",
+      },
+    ],
   },
   {
     timestamps: true,

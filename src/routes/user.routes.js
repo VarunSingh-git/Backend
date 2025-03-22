@@ -8,7 +8,8 @@ import {
     changeCurrentInfo,
     avatarUpdate,
     coverImgUpdate,
-    deleteCoverImg
+    deleteCoverImg,
+    getCurrentUser
 } from "../controller/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middlewares.js";
@@ -72,5 +73,10 @@ router.route("/delete-userCoverImg").delete(
     verifyJWT,
     deleteCoverImg
 )
+router.route("/getCurrent-user").get(
+    verifyJWT,
+    getCurrentUser
+)
+
 
 export default router;
