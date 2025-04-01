@@ -14,6 +14,7 @@ import {
   updateOnCloudinary,
   deleteFromCloudinary,
 } from "../utils/cloudnary.js";
+import { PlayList } from "../models/playlist.model.js";
 
 const getAllVideos = asynchandler(async (req, res) => {
   const { query, sortBy, sortType, userId } = req.query;
@@ -281,6 +282,10 @@ const togglePublishStatus = asynchandler(async (req, res) => {
 
   if (videoFromDB.isPublished === true) {
     videoFromDB.isPublished = false;
+    await PlayList.updateMany(
+      { videos: videoId }, // Jitni bhi playlists me ye video hai, unko target karo
+      { $pull: { videos: videoId } } // Un playlists me se video ID hata do
+    );
   } else {
     videoFromDB.isPublished = true;
   }

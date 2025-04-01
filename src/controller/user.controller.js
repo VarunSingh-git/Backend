@@ -437,6 +437,7 @@ const getCurrentUser = asynchandler(async (req, res) => {
 
 const getUserChannelProfile = asynchandler(async (req, res) => {
   const { username } = req.params; // yaha humne req.params isliye use kiya h cuz jb bhi hum kisi channel ko visit krna chahte h toh uske parameters (URL) se hi usko access kr skte h. so this parameter is params
+  console.log(username);
   if (!username?.trim()) throw new apiError(400, "User not found");
 
   // Agregation Pipeline start
