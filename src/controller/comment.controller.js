@@ -11,9 +11,66 @@ import {
 } from "../utils/validateId.js";
 
 const getVideoComments = asynchandler(async (req, res) => {
-  //TODO: get all comments for a video
   const { videoId } = req.params;
-  const { page = 1, limit = 10 } = req.query; 
+  const { page = 1, limit = 10 } = req.query;
+
+  isStrictValidateId(videoId);
+  validateMongoDB_ID(videoId);
+  await cheackIdExistence(videoId, Video);
+
+  const findedComment = await Video.findById(videoId);
+
+  if (!findedComment) throw new apiError(404, "Video not found");
+  const commentAggregate = [];
+
+  if (videoId) {
+    commentAggregate.push(
+      {
+        $match: {
+          video: new mongoose.Types.ObjectId(videoId),
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "creator",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          comment: 1,
+          video: 1,
+          createdAt: 1,
+          creator: {
+            username: 1,
+            fullname: 1,
+            avatar: 1,
+            _id: 1,
+          },
+        },
+      },
+      {
+        $unwind: {
+          path: "$creator",
+        },
+      }
+    );
+  }
+
+  const options = {
+    page: page,
+    limit: limit,
+  };
+  const result = await Comment.aggregatePaginate(
+    Comment.aggregate(commentAggregate),
+    options
+  );
+
+  if (!result) throw new apiError(401, "Somethin went wrong");
+  return res.status(200).json(new apiResponse(200, result, "Here's your data"));
 });
 
 const addComment = asynchandler(async (req, res) => {

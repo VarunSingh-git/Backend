@@ -11,11 +11,13 @@ const toggleSubscription = asynchandler(async (req, res) => {
 });
 
 // controller to return subscriber list of a channel
+// channle ke subscruber return krega
 const getUserChannelSubscribers = asynchandler(async (req, res) => {
   const { channelId } = req.params;
 });
 
 // controller to return channel list to which user has subscribed
+// jo channle humne subscribe kiye h unn ko return krega
 const getSubscribedChannels = asynchandler(async (req, res) => {
   const { subscriberId } = req.params;
 });

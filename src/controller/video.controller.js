@@ -15,13 +15,41 @@ import {
   deleteFromCloudinary,
 } from "../utils/cloudnary.js";
 import { PlayList } from "../models/playlist.model.js";
+import mongoose from "mongoose";
 
 const getAllVideos = asynchandler(async (req, res) => {
   const { query, sortBy, sortType, userId } = req.query;
   const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 10;
+  const limit = Number(req.query.limit) || 5;
 
-  //TODO: get all videos based on query, sort, pagination
+  const aggragatedVideoData = Video.aggregate([]);
+  // we use empty array cuz yaha hum dynamically data add krege using "aggregatePaginate"
+
+  if (userId) {
+    // yaha hum userId ke base par data fetch kr rhe h. agr userId exist krti h toh uss array me match krege (jo initially empty tha but ab ni h cuz usme data add ho chuka h usig aggregatePaginate) using userId aur "owner" hamre video model me define h same hum query me krege
+    aggragatedVideoData.match({
+      owner: new mongoose.Types.ObjectId(userId),
+    });
+  }
+  if (query) {
+    aggragatedVideoData.match({
+      title: {
+        $regex: query,
+        $options: "i",
+      },
+    });
+  }
+
+  console.log(aggragatedVideoData);
+  const options = {
+    page: page,
+    limit: limit,
+  };
+
+  const result = await Video.aggregatePaginate(aggragatedVideoData, options);
+  console.log(result);
+
+  return res.status(200).json(new apiResponse(200, result, "Here your data"));
 });
 
 const publishAVideo = asynchandler(async (req, res) => {
@@ -56,22 +84,24 @@ const publishAVideo = asynchandler(async (req, res) => {
   if (!description.toString()) throw new apiError(401, "Invalid description");
   console.log("descriptionValidate", typeof description);
 
-  if (description.length >= 100 || description.length <= 10)
+  if (description.length < 10 || description.length > 100)
     throw new apiError(
       402,
       "Description should be contain more then 10 characters or less then 100 characters"
     );
-
   // clodinary pe file uploading ke liye multer se file path liya for storing it in local server then upload on clodinary
   const videoFileLocalPath = req.files?.videoFile[0]?.path;
   const thumbnailFileLocalPath = req.files?.thumbnail[0]?.path;
   // console.log(videoFileLocalPath);
   // console.log(thumbnailFileLocalPath);
-
   const uploadedVideoFile = await uploadOnCloudinary(videoFileLocalPath);
   const uploadedThumbna1il = await uploadOnCloudinary(thumbnailFileLocalPath);
   // thumbnail aur video dono ko validate kiya
-  if (!(uploadedVideoFile || uploadedThumbna1il))
+  // console.log('hi')
+  console.log(`uploadedVideoFile: ${uploadedVideoFile}`);
+  console.log(`uploadedThumbna1il: ${uploadedThumbna1il}`);
+
+  if (!uploadedVideoFile || !uploadedThumbna1il)
     throw new apiError(401, "Video or thumbanil is required");
 
   // video naam ka document create kiya aur db me store kar diya
@@ -94,6 +124,7 @@ const publishAVideo = asynchandler(async (req, res) => {
     throw new apiError(500, "Something went wrong while publishing video");
   // req object ke andar video bhi daal diya jese auth.middlewares me user dala tha req ke andar for further usage
   req.video = confirmCreateVideo;
+  console.log(confirmCreateVideo);
 
   return res
     .status(200)
