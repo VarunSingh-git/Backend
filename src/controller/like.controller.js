@@ -33,8 +33,6 @@ const toggleVideoLike = asynchandler(async (req, res) => {
         like: existedLikes_id,
       },
     });
-    // console.log(`unlikeVideoFromVideoModel, ${unlikeVideoFromVideoModel}`);
-
     if (!unlikeVideoFromVideoModel)
       throw new apiError(400, "Unlike couldn't completed");
     return res.status(200).json(new apiResponse(200, {}, "Unlike success"));
