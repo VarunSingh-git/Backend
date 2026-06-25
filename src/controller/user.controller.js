@@ -7,9 +7,7 @@ import {
   getPublicId,
   deleteFromCloudinary,
 } from "../utils/cloudnary.js";
-import { log } from "console";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userid) => {
@@ -76,7 +74,8 @@ const registerUser = asynchandler(async (req, res, next) => {
 
   // req.files?.avatar[0]?.path yaha main concept h. ki agr req.files? exist krti h toh .avatar ke array me se .avatar[0] first obj retriev kro or agr path ni hai .avatar[0]? toh .path use kro isse path mil jyga jo multer ne upload kiya hai.
   const avatarLocalPath = req.files?.avatar[0]?.path; // req.files multer vaale middleware se mila hai jo humne user.routes.js me banya hai ye path hota hai jaha file store hoti hai
-  const coverLocalPath = req.files?.coverImg[0]?.path; // req.files multer vaale middleware se mila hai jo humne user.routes.js me banya hai ye path hota hai jaha file store hoti hai
+  const coverLocalPath = req.files?.coverImg[0]?.path;
+ // req.files multer vaale middleware se mila hai jo humne user.routes.js me banya hai ye path hota hai jaha file store hoti hai
 
   if (!avatarLocalPath) {
     // console.log("avatarLocalPath", avatarLocalPath);
@@ -298,7 +297,6 @@ const changeCurrentInfo = asynchandler(async (req, res) => {
   ) {
     throw new apiError(400, "All Fields are required");
   }
-
   if (
     (newFullName.length <= 2 && !email.includes("@")) ||
     newEmail.startsWith("@") ||
@@ -315,8 +313,8 @@ const changeCurrentInfo = asynchandler(async (req, res) => {
   );
 
   if (
-    userForValidation.fullname === newFullName &&
-    userForValidation.email === newEmail &&
+    userForValidation.fullname === newFullName ||
+    userForValidation.email === newEmail ||
     userForValidation.username === newUsername
   )
     throw new apiError(
@@ -330,9 +328,9 @@ const changeCurrentInfo = asynchandler(async (req, res) => {
       req.user?._id,
       {
         $set: {
-          newFullName,
-          newEmail,
-          newUsername,
+          fullname: newFullName,
+          email: newEmail,
+          username: newUsername,
         },
       },
       {
@@ -437,9 +435,8 @@ const getCurrentUser = asynchandler(async (req, res) => {
 
 const getUserChannelProfile = asynchandler(async (req, res) => {
   const { username } = req.params; // yaha humne req.params isliye use kiya h cuz jb bhi hum kisi channel ko visit krna chahte h toh uske parameters (URL) se hi usko access kr skte h. so this parameter is params
-  console.log(username);
-  if (!username?.trim()) throw new apiError(400, "User not found");
 
+  if (!username?.trim()) throw new apiError(400, "User not provided");
   // Agregation Pipeline start
   const channel = await User.aggregate([
     {
@@ -460,6 +457,8 @@ const getUserChannelProfile = asynchandler(async (req, res) => {
 
         // this pipeline is use for finding subscribers
       },
+    },
+    {
       $lookup: {
         from: "subscriptions", // isko DB, model, table maan lo ye feilds contain kr skta h more then 1 at a time
         localField: "_id",
@@ -467,6 +466,8 @@ const getUserChannelProfile = asynchandler(async (req, res) => {
         as: "subscriberTo",
         // this pipeline is use for track that how many channels are subscribed by me.
       },
+    },
+    {
       $addFields: {
         subscribersCount: {
           $size: "$subscribers", // ye phle vaale lookup se aya h
@@ -479,7 +480,7 @@ const getUserChannelProfile = asynchandler(async (req, res) => {
           $cond: {
             if: {
               $in: [req.user?._id, "$subscribers.subscriber"],
-              // $in ye array or object me sab dekh leta
+              // $in0 ye array or object me sab dekh leta
             },
             then: true,
             else: false,
@@ -563,6 +564,7 @@ const getWatchHistory = asynchandler(async (req, res) => {
       // kyuki localField: "watchHistory" h. jo ki user.model.js me h
     },
   ]);
+  console.log(user);
 
   return res
     .status(200)

@@ -56,17 +56,29 @@ const getUserTweets = asynchandler(async (req, res) => {
   if (userId.toString() !== req.user?._id.toString())
     throw new apiError(403, "Unauthorized request");
 
-  const userTweet = await Tweet.find({ owner: userId })
-    .populate([
-      { path: "owner", select: "username avatar -_id" },
+  const userTweet = await Tweet.find(
+    {
+      owner: userId 
+    }
+    )
+  .populate(
+    [
+      { 
+        path: "owner", select: "username avatar -_id" 
+      },
+
       {
         path: "like",
         select: "owner tweet",
-        populate: [
-          { path: "owner", select: "username avatar" },
-          { path: "tweet", select: "content" },
+        populate: 
+        [
+          {
+            path: "owner", select: "username avatar" 
+          },
+          {
+            path: "tweet", select: "content" 
+          },
         ],
-        // populate: { path: "tweet" },
       },
     ])
     .select("owner content updatedAt createdAt _id");
